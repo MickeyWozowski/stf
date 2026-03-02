@@ -1,0 +1,114 @@
+.stf-samsung-updater-page .widget-container {
+  margin-bottom: 12px;
+}
+
+.stf-samsung-updater-page .widget-content p {
+  margin-bottom: 6px;
+}
+
+.stf-samsung-updater-page table td,
+.stf-samsung-updater-page table th {
+  vertical-align: middle;
+}
+
+.stf-samsung-updater-page .samsung-job-row.selected td {
+  background-color: #d9edf7;
+}
+
+.stf-samsung-updater-page .samsung-job-table-wrap {
+  overflow: auto;
+}
+
+.stf-samsung-updater-page .samsung-job-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stf-samsung-updater-page .samsung-job-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.stf-samsung-updater-page .samsung-job-modal {
+  width: min(960px, 96vw);
+  max-height: 92vh;
+  background: #fff;
+  border: 1px solid #c7c7c7;
+  border-radius: 6px;
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.32);
+  display: flex;
+  flex-direction: column;
+}
+
+.stf-samsung-updater-page .samsung-job-modal-header {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e5e5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stf-samsung-updater-page .samsung-job-modal-header h4 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.stf-samsung-updater-page .samsung-job-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.stf-samsung-updater-page .samsung-job-modal-content {
+  padding: 12px 14px 14px;
+  overflow: auto;
+}
+
+.stf-samsung-updater-page .samsung-updater-package-history {
+  margin-top: 8px;
+}
+
+.stf-samsung-updater-page .samsung-updater-upload-row {
+  margin-top: 8px;
+}
+
+.stf-samsung-updater-page .samsung-updater-upload-row .text-muted {
+  margin-left: 8px;
+}
+
+.stf-samsung-updater-page .samsung-updater-upload-href {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+
+.stf-samsung-updater-page .samsung-updater-log-console {
+  max-height: 46vh;
+  overflow: auto;
+  background: #111;
+  color: #f3f3f3;
+  font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  border: 1px solid #333;
+}
+
+@media (max-width: 992px) {
+  .stf-samsung-updater-page .samsung-job-modal-backdrop {
+    padding: 8px;
+  }
+
+  .stf-samsung-updater-page .samsung-job-modal {
+    width: 98vw;
+    max-height: 96vh;
+  }
+}

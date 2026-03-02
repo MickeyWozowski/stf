@@ -45,6 +45,43 @@ ul.devices-icon-view .device-photo-small img {
   max-width: 95%; /* TODO: Fix this with a new container */
 }
 
+ul.devices-icon-view .service-process-icon {
+  display: none;
+  font-size: 54px;
+  line-height: 90px;
+  color: #6b7280;
+}
+
+ul.devices-icon-view li.service-device .device-photo-small {
+  height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+ul.devices-icon-view li.service-device .device-photo-small img {
+  display: none;
+}
+
+ul.devices-icon-view li.service-device .service-process-icon {
+  display: inline-block;
+}
+
+ul.devices-icon-view li.service-device.service-device-active .service-process-icon {
+  color: #1d4ed8;
+  animation: stf-service-process-spin 2.4s linear infinite;
+}
+
+@keyframes stf-service-process-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 ul.devices-icon-view .device-name-bigtext {
   display: inline-block;
   width: 80%;

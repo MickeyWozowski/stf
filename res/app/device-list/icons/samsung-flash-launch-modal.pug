@@ -1,0 +1,69 @@
+.stf-samsung-updater-launch-modal.stf-modal
+  .modal-header.dialog-header-confirm
+    h4.modal-title
+      i.fa.fa-cogs
+      .button-spacer
+      span Samsung Updater
+
+  .modal-body
+    p Queue a Samsung Updater job for a connected device.
+    p.text-warning Use Dry Run for validation. Execute mode can write partitions and reboot the target.
+
+    .form-group
+      label.control-label(for='samsungFlashSerial') Target Device
+      select#samsungFlashSerial.form-control(
+        ng-model='form.serial'
+        ng-options='device.serial as device.label for device in data.devices'
+      )
+      p.help-block Choose which connected device will receive this updater job.
+
+    .form-group
+      label.control-label(for='samsungFlashMode') Execution Mode
+      select#samsungFlashMode.form-control(ng-model='form.executionMode')
+        option(value='dry-run') Dry Run (validate workflow only, no writes)
+        option(value='execute') Execute (allow flashing operations)
+      p.help-block Dry Run is recommended unless you intentionally want to perform firmware writes.
+
+    .form-group
+      label.control-label(for='samsungFlashPackageRef') Package Reference
+      input#samsungFlashPackageRef.form-control(
+        type='text'
+        ng-model='form.packageRef'
+        placeholder='firmware://sm-t830/xar/u5'
+      )
+      p.help-block Package identifier used by policy and compatibility checks.
+
+    .form-group
+      label.control-label(for='samsungFlashManifestPath') Manifest Path
+      input#samsungFlashManifestPath.form-control(
+        type='text'
+        ng-model='form.manifestPath'
+        placeholder='/workspace/tmp/phase2_manifest.json'
+      )
+      p.help-block Absolute path to the updater manifest on the STF host.
+
+    .checkbox
+      label
+        input(type='checkbox', ng-model='form.simulate')
+        |  Simulate executor steps (do not run real update commands)
+
+    .alert.alert-danger(ng-if='requiresConfirmation()')
+      strong Execute mode safeguard:
+      |  enter the exact confirmation phrase below to continue.
+
+    .form-group(ng-if='requiresConfirmation()')
+      label.control-label(for='samsungFlashConfirmation') Confirmation Phrase
+      input#samsungFlashConfirmation.form-control(
+        type='text'
+        ng-model='form.destructiveConfirmation'
+        placeholder='I_UNDERSTAND_THIS_WILL_FLASH'
+      )
+      p.help-block Required phrase: 
+        code {{data.confirmationPhrase}}
+
+    .alert.alert-danger(ng-if='error')
+      span {{error}}
+
+  .modal-footer
+    button.btn.btn-default(type='button', ng-click='cancel()') Cancel
+    button.btn.btn-warning(type='button', ng-click='queue()', ng-disabled='!canQueue()') Queue Updater Job

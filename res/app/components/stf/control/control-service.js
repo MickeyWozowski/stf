@@ -158,6 +158,10 @@ module.exports = function ControlServiceFactory(
       return sendTwoWay('device.reboot')
     }
 
+    this.enqueueSamsungFlash = function(options) {
+      return sendTwoWay('device.flash-samsung.enqueue', options || {})
+    }
+
     this.rotate = function(rotation, lock) {
       return sendOneWay('display.rotate', {
         rotation: rotation,

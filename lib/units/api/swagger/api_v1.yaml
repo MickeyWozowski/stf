@@ -34,6 +34,8 @@ tags:
     description: Groups Operations
   - name: admin 
     description: Privileged Operations
+  - name: samsung
+    description: Samsung Updater Operations
 paths:
   /groups:
     x-swagger-router-controller: groups
@@ -2203,6 +2205,178 @@ paths:
             $ref: "#/definitions/UnexpectedErrorResponse"
       security:
         - accessTokenAuth: []
+  /samsung/flash-jobs:
+    x-swagger-router-controller: samsung
+    get:
+      summary: Gets Samsung flash jobs
+      description: Returns Samsung flash jobs filtered by optional query parameters
+      operationId: listFlashJobs
+      tags:
+        - samsung
+      parameters:
+        - name: status
+          in: query
+          description: Optional job status filter
+          required: false
+          type: string
+        - name: serial
+          in: query
+          description: Optional target device serial filter
+          required: false
+          type: string
+        - name: createdBy
+          in: query
+          description: Optional actor email filter
+          required: false
+          type: string
+        - name: limit
+          in: query
+          description: Maximum number of jobs returned
+          required: false
+          type: integer
+          default: 50
+        - name: includeLogs
+          in: query
+          description: Include full per-job logLines payload in list responses
+          required: false
+          type: boolean
+          default: false
+      responses:
+        "200":
+          description: Samsung flash jobs information
+          schema:
+            $ref: "#/definitions/FlashJobListResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+    post:
+      summary: Creates a Samsung flash job
+      description: Queues a Samsung flash job for execution by the worker
+      operationId: createFlashJob
+      tags:
+        - samsung
+      parameters:
+        - name: job
+          in: body
+          description: Samsung flash job payload
+          required: true
+          schema:
+            $ref: "#/definitions/FlashJobCreatePayload"
+      responses:
+        "201":
+          description: Samsung flash job information
+          schema:
+            $ref: "#/definitions/FlashJobResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 400: Bad Request => invalid payload
+              * 401: Unauthorized => bad credentials
+              * 404: Not Found => unknown device
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+  /samsung/flash-jobs/{id}:
+    x-swagger-router-controller: samsung
+    get:
+      summary: Gets a Samsung flash job
+      description: Returns a single Samsung flash job by identifier
+      operationId: getFlashJob
+      tags:
+        - samsung
+      parameters:
+        - name: id
+          in: path
+          description: Samsung flash job identifier
+          required: true
+          type: string
+      responses:
+        "200":
+          description: Samsung flash job information
+          schema:
+            $ref: "#/definitions/FlashJobResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 404: Not Found => unknown job
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+  /samsung/flash-jobs/{id}/cancel:
+    x-swagger-router-controller: samsung
+    post:
+      summary: Cancels a Samsung flash job
+      description: Cancels a queued or running Samsung flash job
+      operationId: cancelFlashJob
+      tags:
+        - samsung
+      parameters:
+        - name: id
+          in: path
+          description: Samsung flash job identifier
+          required: true
+          type: string
+        - name: cancel
+          in: body
+          description: Optional cancellation payload
+          required: false
+          schema:
+            $ref: "#/definitions/FlashJobCancelPayload"
+      responses:
+        "200":
+          description: Samsung flash job information
+          schema:
+            $ref: "#/definitions/FlashJobResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 404: Not Found => unknown job
+              * 409: Conflict => non-cancellable state
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
+  /samsung/flash-service/status:
+    x-swagger-router-controller: samsung
+    get:
+      summary: Gets Samsung updater service status
+      description: Returns queue totals and latest job summary for Samsung updater service
+      operationId: getFlashServiceStatus
+      tags:
+        - samsung
+      parameters:
+        - name: provider
+          in: query
+          description: Optional provider filter
+          required: false
+          type: string
+      responses:
+        "200":
+          description: Samsung updater service status
+          schema:
+            $ref: "#/definitions/FlashServiceStatusResponse"
+        default:
+          description: >
+            Unexpected Error:
+              * 401: Unauthorized => bad credentials
+              * 500: Internal Server Error
+          schema:
+            $ref: "#/definitions/UnexpectedErrorResponse"
+      security:
+        - accessTokenAuth: []
   /swagger.json:
     x-swagger-pipe: swagger_raw
 definitions:
@@ -2442,6 +2616,44 @@ definitions:
         type: string
       device:
         type: object
+  FlashJobResponse:
+    required:
+      - success
+      - description
+      - job
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      job:
+        type: object
+  FlashJobListResponse:
+    required:
+      - success
+      - description
+      - jobs
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      jobs:
+        type: array
+        items:
+          type: object
+  FlashServiceStatusResponse:
+    required:
+      - success
+      - description
+      - status
+    properties:
+      success:
+        type: boolean
+      description:
+        type: string
+      status:
+        type: object
   RemoteConnectUserDeviceResponse:
     required:
       - success
@@ -2523,6 +2735,62 @@ definitions:
     properties:
       note:
         description: Device Note
+        type: string
+  FlashJobCreatePayload:
+    description: Payload object for creating a Samsung flash job
+    required:
+      - serial
+    properties:
+      serial:
+        description: Target device serial
+        type: string
+      packageRef:
+        description: Firmware package reference
+        type: string
+      provider:
+        description: Optional provider override
+        type: string
+      manifestVersion:
+        description: Optional manifest schema version
+        type: string
+      targetBuild:
+        description: Optional target build label
+        type: string
+      executionMode:
+        description: Execution mode
+        type: string
+        enum:
+          - dry-run
+          - execute
+      executionBackend:
+        description: Execution backend
+        type: string
+      message:
+        description: Optional operator message
+        type: string
+      metadata:
+        description: Optional metadata object
+        type: object
+      manifestPath:
+        description: Optional local manifest path
+        type: string
+      packageBasePath:
+        description: Optional package base path
+        type: string
+      destructiveConfirmation:
+        description: Required marker for destructive execution mode
+        type: string
+      simulate:
+        description: Simulate command execution path
+        type: boolean
+      deviceInfo:
+        description: Optional device compatibility metadata
+        type: object
+  FlashJobCancelPayload:
+    description: Payload object for canceling a Samsung flash job
+    properties:
+      reason:
+        description: Cancellation reason
         type: string
   DevicesPayload:
     description: Payload object for adding/removing devices

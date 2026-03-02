@@ -14,6 +14,7 @@ require.ensure([], function(require) {
     require('angular-hotkeys').name,
     require('./layout').name,
     require('./device-list').name,
+    require('./samsung-updater').name,
     require('./group-list').name,
     require('./control-panes').name,
     require('./menu').name,

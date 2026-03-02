@@ -1,0 +1,234 @@
+.stf-samsung-updater-page
+  .row
+    .col-md-12
+      .widget-container.fluid-height
+        .heading
+          stacked-icon(icon='fa-cogs', color='color-darkgray')
+          span(translate) Samsung Updater
+          .pull-right
+            button.btn.btn-xs.btn-primary-outline(type='button', ng-click='refresh()', ng-disabled='loading')
+              i.fa.fa-refresh
+              span(translate) Refresh
+        .widget-content.padded
+          .alert.alert-danger(ng-if='error')
+            span(ng-bind='error')
+
+          .row
+            .col-sm-4
+              h5(translate) Service State
+              p
+                strong(translate) Operating State:
+                span &nbsp;{{(serviceStatus && serviceStatus.operatingState) || 'unknown'}}
+              p
+                strong(translate) Last Refreshed:
+                span &nbsp;{{formatDate(lastRefreshedAt)}}
+            .col-sm-4
+              h5(translate) Queue
+              p queued={{(serviceStatus && serviceStatus.queue && serviceStatus.queue.queued) || 0}}
+              p active={{(serviceStatus && serviceStatus.queue && serviceStatus.queue.active) || 0}}
+              p failed={{(serviceStatus && serviceStatus.queue && serviceStatus.queue.failed) || 0}}
+            .col-sm-4
+              h5(translate) Latest Job
+              p(ng-if='serviceStatus && serviceStatus.latestJob')
+                span {{serviceStatus.latestJob.status}} / {{serviceStatus.latestJob.step}}
+                br
+                span ID: {{serviceStatus.latestJob.id}}
+              p(ng-if='!serviceStatus || !serviceStatus.latestJob') none
+
+  .row
+    .col-md-12
+      .widget-container.fluid-height
+        .heading
+          stacked-icon(icon='fa-play-circle', color='color-darkgray')
+          span(translate) Queue Flash Job
+        .widget-content.padded
+          .row
+            .col-sm-6
+              .form-group
+                label(for='samsungUpdaterSerial', translate) Target Device
+                select#samsungUpdaterSerial.form-control(
+                  ng-model='form.serial'
+                  ng-options='item.serial as item.label for item in targetDevices()'
+                )
+            .col-sm-3
+              .form-group
+                label(for='samsungUpdaterMode', translate) Execution Mode
+                select#samsungUpdaterMode.form-control(ng-model='form.executionMode')
+                  option(value='dry-run') dry-run
+                  option(value='execute') execute
+            .col-sm-3
+              .form-group
+                label(for='samsungUpdaterSimulate', translate) Simulate
+                .checkbox
+                  label
+                    input#samsungUpdaterSimulate(type='checkbox', ng-model='form.simulate')
+                    span(translate) Enable
+          .row
+            .col-sm-6
+              .form-group
+                label(for='samsungUpdaterPackage', translate) Package Reference
+                input#samsungUpdaterPackage.form-control(
+                  type='text'
+                  ng-model='form.packageRef'
+                  placeholder='firmware://sm-t830/xar/u5'
+                )
+                .samsung-updater-upload-row
+                  label.btn.btn-xs.btn-default-outline.btn-file(type='button')
+                    i.fa.fa-upload
+                    span(translate) Upload Local Build
+                    input(
+                      type='file'
+                      ng-file-select='uploadPackageFile($files)'
+                      ng-disabled='uploadingPackage'
+                    )
+                  span.text-muted(ng-if='uploadingPackage')
+                    span(translate) Uploading build...
+                    span &nbsp;{{packageUploadProgress}}%
+                p.text-success.samsung-updater-upload-href(ng-if='packageUploadLastHref && !uploadingPackage')
+                  strong(translate) Uploaded:
+                  span &nbsp;{{packageUploadLastHref}}
+                p.text-danger(ng-if='packageUploadError')
+                  strong(translate) Upload failed:
+                  span &nbsp;{{packageUploadError}}
+                select#samsungUpdaterPackageHistory.form-control.samsung-updater-package-history(
+                  ng-if='packageRefHistory.length'
+                  ng-model='selectedPackageRefHistory'
+                  ng-change='applySelectedPackageRef()'
+                  ng-options='item as item for item in packageRefHistory'
+                )
+                  option(value='')(translate) Recent package references...
+            .col-sm-6
+              .form-group
+                label(for='samsungUpdaterManifest', translate) Manifest Path
+                input#samsungUpdaterManifest.form-control(
+                  type='text'
+                  ng-model='form.manifestPath'
+                  placeholder='/workspace/tmp/phase2_manifest.json'
+                )
+          .row
+            .col-sm-12
+              .form-group
+                label(for='samsungUpdaterMessage', translate) Job Message
+                input#samsungUpdaterMessage.form-control(
+                  type='text'
+                  ng-model='form.message'
+                )
+          .row(ng-if='requiresConfirmation()')
+            .col-sm-12
+              .form-group
+                label(for='samsungUpdaterConfirm', translate) Destructive Confirmation
+                input#samsungUpdaterConfirm.form-control(
+                  type='text'
+                  ng-model='form.destructiveConfirmation'
+                  placeholder='I_UNDERSTAND_THIS_WILL_FLASH'
+                )
+          .row
+            .col-sm-12
+              button.btn.btn-warning(type='button', ng-click='queueJob()', ng-disabled='!canQueue() || queueing')
+                i.fa.fa-cogs
+                span(translate) Queue Samsung Updater Job
+
+  .row
+    .col-md-12
+      .widget-container.fluid-height
+        .heading
+          stacked-icon(icon='fa-history', color='color-darkgray')
+          span(translate) Job History
+        .widget-content.padded
+          p.text-muted(translate) Use Details to open a centered job history dialog with logs and result payload.
+          .table-responsive.samsung-job-table-wrap
+            table.table.table-condensed.table-striped
+              thead
+                tr
+                  th(translate) ID
+                  th(translate) Device
+                  th(translate) Status
+                  th(translate) Step
+                  th(translate) Progress
+                  th(translate) Mode
+                  th(translate) Backend
+                  th(translate) Updated
+                  th(translate) Actions
+              tbody
+                tr.samsung-job-row(
+                  ng-repeat='job in jobs track by job.id'
+                  ng-class='{selected: isSelectedJob(job)}'
+                )
+                  td {{job.id}}
+                  td {{job.deviceSerial}}
+                  td {{job.status}}
+                  td {{job.step}}
+                  td {{job.progress || 0}}%
+                  td {{job.executionMode}}
+                  td {{job.executionBackend}}
+                  td {{formatDate(job.updatedAt)}}
+                  td
+                    .samsung-job-actions
+                      button.btn.btn-xs.btn-primary-outline(
+                        type='button'
+                        ng-click='toggleJobPopover(job, $event)'
+                      )
+                        i.fa.fa-list-alt
+                        span(ng-if='!isSelectedJob(job)', translate) Details
+                        span(ng-if='isSelectedJob(job)', translate) Close
+                      button.btn.btn-xs.btn-danger-outline(
+                        type='button'
+                        ng-if='isCancellable(job)'
+                        ng-click='cancelJob(job, $event)'
+                        ng-disabled='canceling[job.id]'
+                      )
+                        i.fa.fa-ban
+                        span(translate) Cancel
+                tr(ng-if='!jobs.length')
+                  td(colspan='9')
+                    span(translate) No Samsung flash jobs yet.
+
+          .samsung-job-modal-backdrop(ng-if='selectedJobId', ng-click='closeJobModal($event)')
+            .samsung-job-modal(ng-click='$event.stopPropagation()')
+              .samsung-job-modal-header
+                h4
+                  span(translate) Job
+                  span &nbsp;{{selectedJobId}}
+                .samsung-job-modal-actions
+                  button.btn.btn-xs.btn-primary-outline(type='button', ng-click='refreshSelectedJob($event)', ng-disabled='loadingSelectedJob')
+                    i.fa.fa-refresh
+                    span(translate) Refresh Details
+                  button.btn.btn-xs.btn-default-outline(type='button', ng-click='closeJobModal($event)')
+                    i.fa.fa-times
+                    span(translate) Close
+
+              .samsung-job-modal-content
+                .alert.alert-danger(ng-if='selectedJobError')
+                  span(ng-bind='selectedJobError')
+                .alert.alert-info(ng-if='loadingSelectedJob')
+                  span(translate) Loading selected job details...
+
+                .row(ng-if='selectedJob')
+                  .col-sm-6
+                    p
+                      strong(translate) Status:
+                      span &nbsp;{{selectedJob.status}} / {{selectedJob.step}}
+                    p
+                      strong(translate) Device:
+                      span &nbsp;{{selectedJob.deviceSerial}}
+                    p
+                      strong(translate) Mode:
+                      span &nbsp;{{selectedJob.executionMode}} / {{selectedJob.executionBackend}}
+                  .col-sm-6
+                    p
+                      strong(translate) Updated:
+                      span &nbsp;{{formatDate(selectedJob.updatedAt)}}
+                    p
+                      strong(translate) Started:
+                      span &nbsp;{{formatDate(selectedJob.startedAt)}}
+                    p
+                      strong(translate) Finished:
+                      span &nbsp;{{formatDate(selectedJob.finishedAt)}}
+
+                h5(translate) Command I/O Logs
+                pre.samsung-updater-log-console(ng-if='selectedLogs().length')
+                  div(ng-repeat='entry in selectedLogs() track by $index') {{formatLogEntry(entry)}}
+                p.text-muted(ng-if='selectedJob && !selectedLogs().length', translate) No logs captured for this job yet.
+
+                h5(ng-if='selectedJob && selectedJob.result', translate) Result Payload
+                pre(ng-if='selectedJob && selectedJob.result') {{selectedJob.result | json}}

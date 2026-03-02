@@ -8,7 +8,16 @@ module.exports = function DeviceListIconsDirective(
 , StandaloneService
 , LogcatService
 , $rootScope
+, $location
 ) {
+  function isSamsungFlashService(device) {
+    return !!(
+      device &&
+      device.kind === 'service' &&
+      device.serviceType === 'samsung-flash'
+    )
+  }
+
   function DeviceItem() {
     return {
       build: function() {
@@ -24,6 +33,9 @@ module.exports = function DeviceListIconsDirective(
         photo.className = 'device-photo-small'
         var img = document.createElement('img')
         photo.appendChild(img)
+        var processIcon = document.createElement('i')
+        processIcon.className = 'service-process-icon fa fa-cogs'
+        photo.appendChild(processIcon)
         a.appendChild(photo)
 
         // .device-name
@@ -41,8 +53,10 @@ module.exports = function DeviceListIconsDirective(
       }
     , update: function(li, device) {
         var a = li.firstChild
-        var img = a.firstChild.firstChild
-        var name = a.firstChild.nextSibling
+        var photo = a.firstChild
+        var img = photo.firstChild
+        var processIcon = photo.lastChild
+        var name = photo.nextSibling
         var nt = name.firstChild
         var button = name.nextSibling
         var at = button.firstChild
@@ -85,14 +99,36 @@ module.exports = function DeviceListIconsDirective(
           name.classList.remove('state-available')
         }
 
-        if (device.usable && !device.using) {
+        if (isSamsungFlashService(device)) {
+          var queue = device.serviceInfo && device.serviceInfo.queue ? device.serviceInfo.queue : {}
+          var isActive = ((queue.active || 0) + (queue.queued || 0)) > 0
+
+          li.classList.add('service-device')
+          if (isActive) {
+            li.classList.add('service-device-active')
+          }
+          else {
+            li.classList.remove('service-device-active')
+          }
+
+          processIcon.className = 'service-process-icon fa fa-cogs'
+          a.href = '#!/services/samsung-updater'
+          li.classList.remove('device-is-busy')
+        }
+        else if (device.usable && !device.using) {
+          li.classList.remove('service-device')
+          li.classList.remove('service-device-active')
           a.href = '#!/control/' + device.serial
           li.classList.remove('device-is-busy')
         }
         else if (device.using && device.usable) {
+          li.classList.remove('service-device')
+          li.classList.remove('service-device-active')
           a.href = '#!/control/' + device.serial
         }
         else {
+          li.classList.remove('service-device')
+          li.classList.remove('service-device-active')
           a.removeAttribute('href')
           li.classList.add('device-is-busy')
         }
@@ -121,6 +157,17 @@ module.exports = function DeviceListIconsDirective(
       var mapping = Object.create(null)
       var builder = DeviceItem()
 
+      function getDeviceIdFromEvent(target) {
+        var node = target
+        while (node && node !== element[0]) {
+          if (node.id && typeof mapping[node.id] !== 'undefined') {
+            return node.id
+          }
+          node = node.parentNode
+        }
+        return null
+      }
+
 
       function kickDevice(device, force) {
         if (Object.keys(LogcatService.deviceEntries).includes(device.serial)) {
@@ -141,21 +188,18 @@ module.exports = function DeviceListIconsDirective(
       }
 
       element.on('click', function(e) {
-
-        var id
-
-        if (e.target.classList.contains('thumbnail')) {
-          id = e.target.id
-        } else if (e.target.classList.contains('device-status') ||
-          e.target.classList.contains('device-photo-small') ||
-          e.target.classList.contains('device-name')) {
-          id = e.target.parentNode.parentNode.id
-        } else if (e.target.parentNode.classList.contains('device-photo-small')) {
-          id = e.target.parentNode.parentNode.parentNode.id
-        }
+        var id = getDeviceIdFromEvent(e.target)
 
         if (id) {
           var device = mapping[id]
+
+          if (isSamsungFlashService(device)) {
+            scope.$applyAsync(function() {
+              $location.path('/services/samsung-updater')
+            })
+            e.preventDefault()
+            return
+          }
 
           if (e.altKey && device.state === 'available') {
             inviteDevice(device)
