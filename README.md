@@ -12,6 +12,20 @@
 
 ![Super short screencast showing usage](https://raw.githubusercontent.com/DeviceFarmer/stf/master/doc/7s_usage.gif)
 
+## Fork-specific changes from vanilla DeviceFarmer STF
+
+This repository includes custom work beyond upstream STF, focused on practical iOS enablement and local reliability.
+
+* Experimental iOS integration is wired through a companion provider stack (`stf_ios_support` + `stf-ios-provider`) so iOS devices can appear in STF.
+* iOS screenshot capture is implemented with fallback behavior:
+  - Prefer `idevicescreenshot` when available and usable.
+  - Fallback to WebDriverAgent (`/screenshot`) when screenshotr is unavailable.
+* iOS screenshot upload compatibility was hardened for local deployments (`localhost`) to avoid device disconnect/crash paths on upload failures.
+* Storage image serving was hardened:
+  - If GraphicsMagick/ImageMagick tooling is unavailable, STF now passes through original images instead of returning broken/empty screenshot responses.
+  - Content-Type is preserved from blob retrieval to improve browser rendering reliability.
+* Current iOS implementation notes and rollout status are tracked in [doc/IOS_SUPPORT_PORT_PLAN.md](doc/IOS_SUPPORT_PORT_PLAN.md).
+
 ## Contributors
 Thank you to all the people who have already contributed to STF!
 <a href = "https://github.com/devicefarmer/stf/graphs/contributors">
@@ -105,6 +119,7 @@ Here are some things we are planning to address ASAP.
 ### Long term goals
 
 1. iOS support
+2. Improve iOS feature parity and stability in this fork
 
 ## A quick note about security
 
@@ -116,7 +131,7 @@ As the product has evolved from an internal tool running in our internal network
 * [ADB](http://developer.android.com/tools/help/adb.html) properly set up
 * [RethinkDB](http://rethinkdb.com/) >= 2.2
 * [CMake](https://cmake.org/) >= 3.9 (for [node-jpeg-turbo](https://github.com/julusian/node-jpeg-turbo#readme))
-* [GraphicsMagick](http://www.graphicsmagick.org/) (for resizing screenshots)
+* [GraphicsMagick](http://www.graphicsmagick.org/) or [ImageMagick](https://imagemagick.org/) (optional, for screenshot resizing/cropping)
 * [ZeroMQ](http://zeromq.org/) libraries installed
 * [Protocol Buffers](https://github.com/google/protobuf) libraries installed
 * [yasm](http://yasm.tortall.net/) installed (for compiling embedded [libjpeg-turbo](https://github.com/devicefarmer/node-jpeg-turbo))
