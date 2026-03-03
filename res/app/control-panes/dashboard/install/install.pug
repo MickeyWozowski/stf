@@ -19,6 +19,21 @@
       i.fa.fa-2x.fa-download.drop-area-icon
       .drop-area-text(translate) Drop file to upload
 
+    .input-group.form-inline(ng-if='isIOS()')
+      input.form-control(
+        type='text'
+        ng-model='launchBundleId'
+        placeholder='com.example.app'
+        ng-enter='launchApp(launchBundleId)')
+      span.input-group-btn
+        button.btn.btn-primary-outline(
+          ng-click='launchApp(launchBundleId)'
+          ng-disabled='!launchBundleId')
+          i.fa.fa-play
+          span  Launch App
+    .help-block(ng-if='isIOS() && launchAppStatus', ng-class='{"text-success": launchAppStatus.success, "text-danger": launchAppStatus.success === false}')
+      span {{ launchAppStatus.text }}
+
     .upload-status(ng-if='installation').selectable
       uib-progressbar(max='100', value='installation.progress', ng-if='!installation.settled',
         ng-class='{"active": !installation.settled}').progress-striped

@@ -5,6 +5,7 @@ require('ng-file-upload')
 module.exports = angular.module('stf.install', [
   'angularFileUpload',
   require('./activities').name,
+  require('stf/app-state').name,
   require('stf/settings').name,
   require('stf/storage').name,
   require('stf/install').name,

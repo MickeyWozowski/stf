@@ -154,6 +154,12 @@ module.exports = function ControlServiceFactory(
       })
     }
 
+    this.launchApp = function(bundleId) {
+      return sendTwoWay('device.launchApp', {
+        bundleId: bundleId
+      })
+    }
+
     this.reboot = function() {
       return sendTwoWay('device.reboot')
     }
