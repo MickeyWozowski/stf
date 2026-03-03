@@ -14,17 +14,49 @@
 
 ## Fork-specific changes from vanilla DeviceFarmer STF
 
-This repository includes custom work beyond upstream STF, focused on practical iOS enablement and local reliability.
+This fork keeps Android behavior from upstream STF and adds an experimental iOS path that is disabled by default unless explicitly enabled.
 
-* Experimental iOS integration is wired through a companion provider stack (`stf_ios_support` + `stf-ios-provider`) so iOS devices can appear in STF.
-* iOS screenshot capture is implemented with fallback behavior:
-  - Prefer `idevicescreenshot` when available and usable.
-  - Fallback to WebDriverAgent (`/screenshot`) when screenshotr is unavailable.
-* iOS screenshot upload compatibility was hardened for local deployments (`localhost`) to avoid device disconnect/crash paths on upload failures.
-* Storage image serving was hardened:
-  - If GraphicsMagick/ImageMagick tooling is unavailable, STF now passes through original images instead of returning broken/empty screenshot responses.
-  - Content-Type is preserved from blob retrieval to improve browser rendering reliability.
-* Current iOS implementation notes and rollout status are tracked in [doc/IOS_SUPPORT_PORT_PLAN.md](doc/IOS_SUPPORT_PORT_PLAN.md).
+### What was added in this fork
+
+* New iOS provider command:
+  - `stf ios-provider` (`lib/cli/ios-provider/index.js`)
+  - runtime unit (`lib/units/ios-provider/index.js`)
+* `stf local` iOS flags:
+  - `--ios-enable`
+  - `--ios-provider-mode` (`disabled` or `host-bridge`)
+  - `--ios-coordinator-event-connect-sub` and `--ios-coordinator-event-topic`
+  - `--ios-storage-url`, `--ios-ios-deploy-path`, `--ios-xcode-developer-dir`, `--ios-wda-host`
+* Control-plane wiring for iOS device identity/actions (wire/websocket/API path updates).
+* iOS actions currently wired in STF:
+  - lifecycle from coordinator events (`connect/present/heartbeat/disconnect`)
+  - touch/home/type via WDA when WDA is available
+  - app install (`.ipa`), uninstall, launch-by-bundle-id
+  - screenshot capture and upload path for iOS devices
+* UI update:
+  - install pane now includes iOS launch-by-bundle-id action.
+* Storage reliability hardening:
+  - image storage plugin now preserves `Content-Type` from blob retrieval.
+  - if neither GraphicsMagick nor ImageMagick is installed, image responses degrade to source passthrough instead of broken screenshot output.
+* iOS provider-side screenshot capture path was updated in the companion iOS support repo (`stf_ios_support`) with `idevicescreenshot` and WDA fallback behavior.
+* Samsung flash workflow (MVP scaffolding and guarded execution path):
+  - new CLI command `stf flash-samsung` with actions: `worker`, `enqueue`, `list`, `get`, `cancel`.
+  - `stf local` worker flags: `--enable-flash-samsung`, `--flash-samsung-execution-mode`, `--flash-samsung-execution-backend`, and policy guardrail options.
+  - new DB-backed `flashJobs` workflow for queueing, status, logs, and cancellation.
+  - REST API surface under `/api/v1/samsung/flash-jobs` and `/api/v1/samsung/flash-service/status`.
+  - websocket actions for enqueue/status and UI integration in maintenance and the Samsung updater service view.
+  - safety defaults to non-destructive mode (`dry-run` by default), with explicit opt-in guardrails for execute mode.
+
+### What remains different from full Android parity
+
+* iOS still requires a companion macOS stack (`stf_ios_support`) for coordinator/video/WDA orchestration.
+* Full right-panel parity is not complete; Android-only controls are still unsupported for iOS.
+* iOS in this fork is still marked experimental.
+* Samsung flashing execution flow is intentionally guarded and currently centered on controlled lab workflows.
+
+Current implementation notes and rollout status are tracked in [doc/IOS_SUPPORT_PORT_PLAN.md](doc/IOS_SUPPORT_PORT_PLAN.md).
+Samsung workflow references:
+* [doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md](doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md)
+* [doc/SAMSUNG_FLASHING_TEST_PLAN.md](doc/SAMSUNG_FLASHING_TEST_PLAN.md)
 
 ## Contributors
 Thank you to all the people who have already contributed to STF!
@@ -40,6 +72,9 @@ Thank you to all the people who have already contributed to STF!
     * Supports Wear 5.1 (but not 5.0 due to missing permissions)
     * Supports Fire OS, CyanogenMod, and other heavily Android based distributions
     * `root` is **not** required for any current functionality
+  - iOS (experimental, fork-specific)
+    * Requires macOS host tooling and companion `stf_ios_support` components
+    * Current validated fork scope includes lifecycle, remote view, basic input, app install/uninstall/launch, and screenshots
 * Remote control any device from your browser
   - Real-time screen view
     * Refresh speed can reach 30-40 FPS depending on specs and Android version. See [minicap](https://github.com/devicefarmer/minicap) for more information.
@@ -215,6 +250,47 @@ You're now ready to start up STF itself:
 
 ```bash
 stf local
+```
+
+To run local iOS host-bridge mode in this fork:
+
+```bash
+stf local \
+  --ios-enable \
+  --ios-provider-mode host-bridge \
+  --ios-coordinator-event-connect-sub tcp://127.0.0.1:9394 \
+  --ios-coordinator-event-topic devEvent
+```
+
+You can also run the iOS provider directly:
+
+```bash
+stf ios-provider \
+  --mode host-bridge \
+  --connect-sub tcp://127.0.0.1:7250 \
+  --connect-push tcp://127.0.0.1:7270 \
+  --coordinator-event-connect-sub tcp://127.0.0.1:9394 \
+  --coordinator-event-topic devEvent \
+  --storage-url http://127.0.0.1:7100/
+```
+
+_Note: depending on your `stf_ios_support` clone/config, coordinator events may use `tcp://127.0.0.1:7294` instead of `9394`._
+
+To run the Samsung flash worker in local mode (safe default):
+
+```bash
+stf local \
+  --enable-flash-samsung \
+  --flash-samsung-execution-mode dry-run \
+  --flash-samsung-execution-backend mac-dev-local
+```
+
+Or run the worker directly:
+
+```bash
+stf flash-samsung worker \
+  --execution-mode dry-run \
+  --execution-backend mac-dev-local
 ```
 
 Later, if you want to change the values of these built-in objects, for example to change the identity of the administrator user, you must follow the below instructions or you are likely to encounter data inconsistency issues:
