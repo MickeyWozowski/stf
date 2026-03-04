@@ -1,55 +1,6 @@
-# STF Fork (DevOps Quick Guide)
+# STF Fork (Quick Guide)
 
 ## Topology Diagram
-
-```mermaid
-flowchart TB
-    DEV["DevOps Operator"]
-    UI["STF UI<br/>:7100 app, :7110 ws"]
-
-    subgraph STFHOST["STF Host (repo: stf)"]
-        SCRIPT["restart-all.sh"]
-        DBSEL{"DB backend"}
-        DBLOCAL["RethinkDB Local<br/>127.0.0.1:28015"]
-        DOCKER["Docker Compose"]
-        DBCONT["RethinkDB Container"]
-        STF["STF Local Stack"]
-        IOSP["iOS Provider<br/>(in STF)"]
-        LOGS["Logs<br/>tmp/restart-all/*.log"]
-    end
-
-    subgraph IOSHOST["iOS Support (repo: stf_ios_support)"]
-        COORD["iOS Coordinator"]
-        PHONE["iPhone (USB)"]
-    end
-
-    DEV -->|run| SCRIPT
-    SCRIPT -->|start| STF
-    SCRIPT -->|start| COORD
-    SCRIPT --> DBSEL
-
-    DBSEL -->|local| DBLOCAL
-    DBSEL -->|docker| DOCKER
-    DOCKER --> DBCONT
-    DBLOCAL -->|db| STF
-    DBCONT -->|db| STF
-
-    UI <-->|REST + WS| STF
-    STF <-->|ZMQ dev bus| IOSP
-    COORD -->|PUB devEvent :9394| IOSP
-    IOSP -->|WDA HTTP| COORD
-    PHONE -->|USB| COORD
-    COORD -->|video websocket| UI
-
-    STF --> LOGS
-    COORD --> LOGS
-    DBLOCAL --> LOGS
-    DBCONT --> LOGS
-```
-
-Source: `doc/topology.mmd`
-
-Static fallback:
 
 ![STF Topology Diagram](doc/topo-v1.png)
 
@@ -65,7 +16,8 @@ DevOps engineers bringing up STF in a local/dev environment.
 
 ## TODO
 - Generalize bring up process
--  
+- Add AAOS device flashing
+- Support Jenkins Automation
 
 ## What We Use In Development
 
@@ -75,7 +27,7 @@ DevOps engineers bringing up STF in a local/dev environment.
 - macOS iOS toolchain (for iOS path): Xcode, `ios-deploy`
 - Companion repo: `$HOME/Projects/STF iOS/stf_ios_support`
 
-## Fast Start (What We Actually Run)
+## Fast Start 
 
 From repo root:
 
