@@ -291,6 +291,7 @@ device-screen input {
   top: 12px;
   left: 12px;
   z-index: 30;
+  pointer-events: none;
   width: 420px;
   max-width: calc(100% - 24px);
   border-radius: 10px;
@@ -298,6 +299,10 @@ device-screen input {
   background: rgba(8, 18, 30, 0.86);
   color: #edf2f8;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.stf-device-control .ios-startup-overlay button {
+  pointer-events: auto;
 }
 
 .stf-device-control .ios-startup-header {
