@@ -281,3 +281,124 @@ device-screen input {
   -ms-transition: none !important;
   transition: none !important;
 }
+
+.stf-device-control .device-screen-stage {
+  position: relative;
+}
+
+.stf-device-control .ios-startup-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 30;
+  width: 420px;
+  max-width: calc(100% - 24px);
+  border-radius: 10px;
+  border: 1px solid rgba(204, 215, 232, 0.35);
+  background: rgba(8, 18, 30, 0.86);
+  color: #edf2f8;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
+
+.stf-device-control .ios-startup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border-bottom: 1px solid rgba(204, 215, 232, 0.2);
+}
+
+.stf-device-control .ios-startup-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  letter-spacing: 0.2px;
+}
+
+.stf-device-control .ios-startup-body {
+  padding: 8px 10px 10px;
+}
+
+.stf-device-control .ios-startup-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.stf-device-control .ios-startup-steps li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 7px;
+}
+
+.stf-device-control .ios-startup-steps li:last-child {
+  margin-bottom: 0;
+}
+
+.stf-device-control .ios-startup-steps li.step-done i {
+  color: #67d46a;
+}
+
+.stf-device-control .ios-startup-steps li.step-active i {
+  color: #8db8ff;
+}
+
+.stf-device-control .ios-startup-steps li.step-error i {
+  color: #ff7f6d;
+}
+
+.stf-device-control .ios-startup-step-text {
+  min-width: 0;
+}
+
+.stf-device-control .ios-startup-step-label {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.stf-device-control .ios-startup-step-detail {
+  margin-top: 1px;
+  color: #c1cfe2;
+  font-size: 11px;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.stf-device-control .ios-startup-diagnostics {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(204, 215, 232, 0.2);
+}
+
+.stf-device-control .ios-startup-diagnostic {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.stf-device-control .ios-startup-diagnostic:last-child {
+  margin-bottom: 0;
+}
+
+.stf-device-control .ios-startup-diagnostic .label {
+  min-width: 62px;
+  color: #a7bacf;
+}
+
+.stf-device-control .ios-startup-diagnostic code {
+  font-size: 11px;
+  color: #eff4fb;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 1px 4px;
+  border-radius: 3px;
+  max-width: 290px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

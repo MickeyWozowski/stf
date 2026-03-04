@@ -14,6 +14,16 @@ module.exports = function DeviceServiceFactory(
 , CommonService
 , TransactionService
 ) {
+  function debugLog(level, message, details) {
+    var logger = console && console[level] ? console[level] : console.log
+    if (typeof details !== 'undefined') {
+      logger.call(console, '[STF-DBG][DeviceService] ' + message, details)
+    }
+    else {
+      logger.call(console, '[STF-DBG][DeviceService] ' + message)
+    }
+  }
+
   var deviceService = {}
 
   function Tracker($scope, options) {
@@ -544,6 +554,10 @@ module.exports = function DeviceServiceFactory(
   }
 
   deviceService.get = function(serial, $scope) {
+    debugLog('info', 'get called', {
+      serial: serial
+    })
+
     var tracker = new Tracker($scope, {
       filter: function(device) {
         return device.serial === serial
@@ -553,8 +567,27 @@ module.exports = function DeviceServiceFactory(
 
     return deviceService.load(serial)
       .then(function(device) {
+        debugLog('info', 'load resolved in get', {
+          serial: device && device.serial
+        , platform: device && device.platform
+        , platformFamily: device && device.platformFamily
+        , present: device && device.present
+        , status: device && device.status
+        , ready: device && device.ready
+        , usable: device && device.usable
+        , using: device && device.using
+        , owner: device && device.owner
+        , channel: device && device.channel
+        })
         tracker.add(device)
         return device
+      })
+      .catch(function(err) {
+        debugLog('error', 'get failed', {
+          serial: serial
+        , message: err && err.message
+        })
+        throw err
       })
   }
 

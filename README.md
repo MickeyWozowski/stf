@@ -1,8 +1,3 @@
-<img src="https://raw.githubusercontent.com/DeviceFarmer/stf/master/res/common/logo/exports/STF-128.png" style="width:100px;height:100px;" alt="STF">
-
-[![Build Status](https://travis-ci.org/DeviceFarmer/stf.svg?branch=master&status=created)](https://travis-ci.org/github/DeviceFarmer/stf)
-[![Docker Pulls](https://img.shields.io/docker/pulls/devicefarmer/stf.svg)](https://hub.docker.com/r/devicefarmer/stf/)
-[![npm](https://img.shields.io/npm/v/@devicefarmer/stf)](https://www.npmjs.com/package/@devicefarmer/stf)
 
 **STF** (or Smartphone Test Farm) is a web application for debugging smartphones, smartwatches and other gadgets remotely, from the comfort of your browser.
 
@@ -58,11 +53,6 @@ Samsung workflow references:
 * [doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md](doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md)
 * [doc/SAMSUNG_FLASHING_TEST_PLAN.md](doc/SAMSUNG_FLASHING_TEST_PLAN.md)
 
-## Contributors
-Thank you to all the people who have already contributed to STF!
-<a href = "https://github.com/devicefarmer/stf/graphs/contributors">
-  <img src = "https://contrib.rocks/image?repo=devicefarmer/stf"/>
-</a>
 
 ## Features
 

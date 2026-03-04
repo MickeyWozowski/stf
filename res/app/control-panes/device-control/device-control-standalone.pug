@@ -1,5 +1,60 @@
 .interact-control.fill-height.stf-device-control(ng-controller='DeviceControlCtrl').fill-height.fill-width
-  div(ng-controller='DeviceScreenCtrl', ng-if='device').fill-height.fill-width
-    div(ng-file-drop='installFile($files)', ng-file-drag-over-class='dragover').fill-height.fill-width
-      device-context-menu(device='device', control='control')
-        device-screen(device='device', control='control').fill-height.fill-width
+  .fill-height.fill-width.device-screen-stage
+    div(ng-controller='DeviceScreenCtrl', ng-if='device').fill-height.fill-width
+      div(ng-file-drop='installFile($files)', ng-file-drag-over-class='dragover').fill-height.fill-width
+        device-context-menu(device='device', control='control')
+          device-screen(device='device', control='control').fill-height.fill-width
+
+    .ios-startup-overlay(ng-if='shouldShowIosStartupOverlay()')
+      .ios-startup-header
+        .ios-startup-title
+          i.fa.fa-sitemap
+          span iOS startup timeline
+        button(type='button', ng-click='toggleIosStartupOverlay()').btn.btn-xs.btn-default-outline
+          i.fa(ng-class='iosStartup.expanded ? "fa-chevron-up" : "fa-chevron-down"')
+
+      .ios-startup-body(ng-show='iosStartup.expanded')
+        ul.ios-startup-steps
+          li(ng-repeat='step in iosStartup.steps track by step.id', ng-class='"step-" + step.state')
+            i.fa(ng-class='stepIconClass(step.state)')
+            .ios-startup-step-text
+              .ios-startup-step-label {{step.label}}
+              .ios-startup-step-detail {{step.detail}}
+
+        .ios-startup-diagnostics
+          .ios-startup-diagnostic
+            span.label URL
+            code {{iosStartup.diagnostics.socketUrl || iosStartup.diagnostics.displayUrl || '-'}}
+          .ios-startup-diagnostic
+            span.label Video port
+            code {{iosStartup.diagnostics.videoPort !== null ? iosStartup.diagnostics.videoPort : '-'}}
+          .ios-startup-diagnostic
+            span.label Socket
+            code {{iosStartup.diagnostics.socketState || '-'}}
+          .ios-startup-diagnostic
+            span.label Frames
+            code {{iosStartup.diagnostics.frameCount || 0}}
+          .ios-startup-diagnostic
+            span.label Rendered
+            code {{iosStartup.diagnostics.renderedFrameCount || 0}}
+          .ios-startup-diagnostic
+            span.label Avg luma
+            code {{iosStartup.diagnostics.lastAverageLuma !== null ? iosStartup.diagnostics.lastAverageLuma : '-'}}
+          .ios-startup-diagnostic
+            span.label Dark frames
+            code {{iosStartup.diagnostics.darkFrameCount || 0}}
+          .ios-startup-diagnostic
+            span.label Reconnect
+            code {{iosStartup.diagnostics.reconnectAttempts || 0}}
+          .ios-startup-diagnostic
+            span.label Retry reason
+            code {{iosStartup.diagnostics.reconnectReason || '-'}}
+          .ios-startup-diagnostic
+            span.label Last error
+            code {{iosStartup.diagnostics.lastErrorCode ? (iosStartup.diagnostics.lastErrorCode + (iosStartup.diagnostics.lastErrorStatus ? (" (" + iosStartup.diagnostics.lastErrorStatus + ")") : "")) : (iosStartup.diagnostics.lastErrorMessage || '-')}}
+          .ios-startup-diagnostic
+            span.label First frame
+            code {{iosStartup.diagnostics.firstFrameAt ? (iosStartup.diagnostics.firstFrameAt | date:"mediumTime") : '-'}}
+          .ios-startup-diagnostic
+            span.label First visible
+            code {{iosStartup.diagnostics.firstVisibleFrameAt ? (iosStartup.diagnostics.firstVisibleFrameAt | date:"mediumTime") : '-'}}

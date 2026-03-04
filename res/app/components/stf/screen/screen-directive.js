@@ -26,6 +26,128 @@ module.exports = function DeviceScreenDirective(
       var device = scope.device()
       var control = scope.control()
 
+      function isIosDeviceForDiagnostics() {
+        if (!device) {
+          return false
+        }
+        if (device.platformFamily === 'ios') {
+          return true
+        }
+        return String(device.platform || '').toLowerCase() === 'ios'
+      }
+
+      var streamDiagnostics = null
+      var lastDiagnosticsPublishAt = 0
+
+      function initStreamDiagnostics() {
+        if (!isIosDeviceForDiagnostics()) {
+          streamDiagnostics = null
+          return
+        }
+
+        streamDiagnostics = {
+          serial: device.serial || null
+        , displayUrl: device.display && device.display.url ? device.display.url : null
+        , socketUrl: null
+        , socketState: 'connecting'
+        , openedAt: null
+        , closedAt: null
+        , errorAt: null
+        , closeCode: null
+        , closeReason: null
+        , firstFrameAt: null
+        , firstVisibleFrameAt: null
+        , lastFrameAt: null
+        , frameCount: 0
+        , renderedFrameCount: 0
+        , skippedFrameCount: 0
+        , lastRenderedAt: null
+        , lastBlobSize: 0
+        , lastAverageLuma: null
+        , darkFrameCount: 0
+        , reconnectAttempt: 0
+        , reconnectDelayMs: null
+        , reconnectReason: null
+        }
+      }
+
+      function normalizeFrameSocketUrl(rawUrl) {
+        if (!rawUrl) {
+          return rawUrl
+        }
+
+        // iOS frame sockets are routed through poorxy under /frames/* and require
+        // the same host-origin session cookie as the main STF app page.
+        var match = /^(wss?):\/\/[^/]+(\/frames\/.*)$/i.exec(rawUrl)
+        if (!match) {
+          return rawUrl
+        }
+
+        var host = $window.location && $window.location.host
+        if (!host) {
+          return rawUrl
+        }
+
+        var scheme = $window.location.protocol === 'https:' ? 'wss' : 'ws'
+        return scheme + '://' + host + match[2]
+      }
+
+      function publishStreamDiagnostics(type, extra, force) {
+        if (!streamDiagnostics || !streamDiagnostics.serial) {
+          return
+        }
+
+        var now = Date.now()
+        if (!force && type.indexOf('frame') === 0 && now - lastDiagnosticsPublishAt < 500) {
+          return
+        }
+
+        lastDiagnosticsPublishAt = now
+
+        var payload = angular.extend({}, streamDiagnostics, extra || {})
+        payload.type = type
+        payload.at = now
+        payload.serial = streamDiagnostics.serial
+
+        scope.$evalAsync(function() {
+          scope.$emit('stf:ios-screen-stream', payload)
+        })
+      }
+
+      function sampleAverageLuma(ctx, width, height) {
+        try {
+          var sampleW = Math.max(1, Math.min(32, width))
+          var sampleH = Math.max(1, Math.min(32, height))
+          var sx = Math.max(0, Math.floor((width - sampleW) / 2))
+          var sy = Math.max(0, Math.floor((height - sampleH) / 2))
+          var image = ctx.getImageData(sx, sy, sampleW, sampleH).data
+          if (!image || !image.length) {
+            return null
+          }
+
+          var total = 0
+          var pixels = 0
+          for (var i = 0; i < image.length; i += 4) {
+            var r = image[i]
+            var g = image[i + 1]
+            var b = image[i + 2]
+            total += 0.2126 * r + 0.7152 * g + 0.0722 * b
+            pixels += 1
+          }
+
+          if (!pixels) {
+            return null
+          }
+
+          return Math.round(total / pixels)
+        }
+        catch (err) {
+          return null
+        }
+      }
+
+      initStreamDiagnostics()
+
       var input = element.find('input')
 
       var screen = scope.screen = {
@@ -58,18 +180,49 @@ module.exports = function DeviceScreenDirective(
           catch (err) { /* noop */ }
         }
 
-        var ws = new WebSocket(device.display.url)
-        ws.binaryType = 'blob'
-
-        ws.onerror = function errorListener() {
-          // @todo Handle
+        var socketUrl = normalizeFrameSocketUrl(device.display.url)
+        if (streamDiagnostics) {
+          streamDiagnostics.displayUrl = (
+            device.display && device.display.url ? device.display.url : null
+          )
+          streamDiagnostics.socketUrl = socketUrl
         }
 
-        ws.onclose = function closeListener() {
-          // @todo Maybe handle
+        var ws = new WebSocket(socketUrl)
+        ws.binaryType = 'blob'
+
+        publishStreamDiagnostics('socket_connecting', null, true)
+
+        ws.onerror = function errorListener(err) {
+          if (streamDiagnostics) {
+            streamDiagnostics.socketState = 'error'
+            streamDiagnostics.errorAt = Date.now()
+          }
+          publishStreamDiagnostics('socket_error', {
+            errorMessage: err && err.message ? err.message : 'WebSocket error'
+          }, true)
+        }
+
+        ws.onclose = function closeListener(evt) {
+          if (streamDiagnostics) {
+            streamDiagnostics.socketState = 'closed'
+            streamDiagnostics.closedAt = Date.now()
+            streamDiagnostics.closeCode = evt && typeof evt.code === 'number' ? evt.code : null
+            streamDiagnostics.closeReason = evt && evt.reason ? evt.reason : null
+          }
+          publishStreamDiagnostics('socket_close', null, true)
         }
 
         ws.onopen = function openListener() {
+          if (streamDiagnostics) {
+            streamDiagnostics.socketState = 'open'
+            streamDiagnostics.openedAt = Date.now()
+            streamDiagnostics.errorAt = null
+            streamDiagnostics.closedAt = null
+            streamDiagnostics.closeCode = null
+            streamDiagnostics.closeReason = null
+          }
+          publishStreamDiagnostics('socket_open', null, true)
           checkEnabled()
         }
 
@@ -288,6 +441,20 @@ module.exports = function DeviceScreenDirective(
             screen.rotation = device.display.rotation
 
             if (message.data instanceof Blob) {
+              if (streamDiagnostics) {
+                var frameAt = Date.now()
+                streamDiagnostics.frameCount += 1
+                streamDiagnostics.lastFrameAt = frameAt
+                streamDiagnostics.lastBlobSize = message.data.size || 0
+                if (!streamDiagnostics.firstFrameAt) {
+                  streamDiagnostics.firstFrameAt = frameAt
+                  publishStreamDiagnostics('frame_first', null, true)
+                }
+                else {
+                  publishStreamDiagnostics('frame', null, false)
+                }
+              }
+
               if (shouldUpdateScreen()) {
                 if (scope.displayError) {
                   scope.$apply(function() {
@@ -305,6 +472,30 @@ module.exports = function DeviceScreenDirective(
                   updateImageArea(this)
 
                   g.drawImage(img, 0, 0, img.width, img.height)
+
+                  if (streamDiagnostics) {
+                    streamDiagnostics.renderedFrameCount += 1
+                    streamDiagnostics.lastRenderedAt = Date.now()
+
+                    var shouldSampleLuma = streamDiagnostics.renderedFrameCount <= 5 ||
+                      streamDiagnostics.renderedFrameCount % 20 === 0
+                    if (shouldSampleLuma) {
+                      var averageLuma = sampleAverageLuma(g, img.width, img.height)
+                      if (averageLuma !== null) {
+                        streamDiagnostics.lastAverageLuma = averageLuma
+                        if (averageLuma <= 8) {
+                          streamDiagnostics.darkFrameCount += 1
+                        }
+                      }
+                    }
+
+                    if (!streamDiagnostics.firstVisibleFrameAt) {
+                      streamDiagnostics.firstVisibleFrameAt = streamDiagnostics.lastRenderedAt
+                      publishStreamDiagnostics('frame_visible', null, true)
+                    }
+
+                    publishStreamDiagnostics('frame_rendered', null, false)
+                  }
 
                   // Try to forcefully clean everything to get rid of memory
                   // leaks. Note that despite this effort, Chrome will still
@@ -324,6 +515,10 @@ module.exports = function DeviceScreenDirective(
                   // Happily ignore. I suppose this shouldn't happen, but
                   // sometimes it does, presumably when we're loading images
                   // too quickly.
+                  if (streamDiagnostics) {
+                    streamDiagnostics.skippedFrameCount += 1
+                    publishStreamDiagnostics('frame_decode_error', null, true)
+                  }
 
                   // Do the same cleanup here as in onload.
                   img.onload = img.onerror = null
