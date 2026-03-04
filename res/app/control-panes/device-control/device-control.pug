@@ -103,7 +103,16 @@
 
       .stf-vnc-bottom.as-row(ng-hide='$root.standalone')
         .controls.as-cell
-          .btn-group.btn-group-justified
+          .btn-group.btn-group-justified(ng-if='isIosDevice(device)')
+            a.btn.btn-primary.btn-lg.no-transition.stf-vnc-key-placeholder(aria-hidden='true', tabindex='-1')
+              i.fa.fa-bars
+            a.btn.btn-primary.btn-lg.no-transition.stf-vnc-key-placeholder(aria-hidden='true', tabindex='-1')
+              i.fa.fa-home
+            a.btn.btn-primary.btn-lg.no-transition(ng-click='control.home(); $event.preventDefault(); $event.stopPropagation()', title='{{"Home"|translate}}')
+              i.fa.fa-home
+            a.btn.btn-primary.btn-lg.no-transition.stf-vnc-key-placeholder(aria-hidden='true', tabindex='-1')
+              i.fa.fa-mail-reply
+          .btn-group.btn-group-justified(ng-if='!isIosDevice(device)')
             a(device-control-key='menu', title='{{"Menu"|translate}}').btn.btn-primary.btn-lg.no-transition
               i.fa.fa-bars
             a(device-control-key='home', title='{{"Home"|translate}}').btn.btn-primary.btn-lg.no-transition

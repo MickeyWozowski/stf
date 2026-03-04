@@ -210,6 +210,11 @@ device-screen input {
   border-radius: 0;
 }
 
+.stf-vnc-bottom .stf-vnc-key-placeholder {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .stf-vnc-bottom .btn-primary:active {
   background: rgba(250, 250, 250, 0.75);
   border: none;
