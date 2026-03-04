@@ -1,54 +1,190 @@
+# STF Fork (DevOps Quick Guide)
 
-**STF** (or Smartphone Test Farm) is a web application for debugging smartphones, smartwatches and other gadgets remotely, from the comfort of your browser.
+## Topology Diagram
 
-## Overview
+```mermaid
+flowchart TB
+    DEV["DevOps Operator"]
+    UI["STF UI<br/>:7100 app, :7110 ws"]
 
-![Close-up of device shelf](https://raw.githubusercontent.com/DeviceFarmer/stf/master/doc/shelf_closeup_790x.jpg)
+    subgraph STFHOST["STF Host (repo: stf)"]
+        SCRIPT["restart-all.sh"]
+        DBSEL{"DB backend"}
+        DBLOCAL["RethinkDB Local<br/>127.0.0.1:28015"]
+        DOCKER["Docker Compose"]
+        DBCONT["RethinkDB Container"]
+        STF["STF Local Stack"]
+        IOSP["iOS Provider<br/>(in STF)"]
+        LOGS["Logs<br/>tmp/restart-all/*.log"]
+    end
 
-![Super short screencast showing usage](https://raw.githubusercontent.com/DeviceFarmer/stf/master/doc/7s_usage.gif)
+    subgraph IOSHOST["iOS Support (repo: stf_ios_support)"]
+        COORD["iOS Coordinator"]
+        PHONE["iPhone (USB)"]
+    end
 
-## Fork-specific changes from vanilla DeviceFarmer STF
+    DEV -->|run| SCRIPT
+    SCRIPT -->|start| STF
+    SCRIPT -->|start| COORD
+    SCRIPT --> DBSEL
 
-This fork keeps Android behavior from upstream STF and adds an experimental iOS path that is disabled by default unless explicitly enabled.
+    DBSEL -->|local| DBLOCAL
+    DBSEL -->|docker| DOCKER
+    DOCKER --> DBCONT
+    DBLOCAL -->|db| STF
+    DBCONT -->|db| STF
 
-### What was added in this fork
+    UI <-->|REST + WS| STF
+    STF <-->|ZMQ dev bus| IOSP
+    COORD -->|PUB devEvent :9394| IOSP
+    IOSP -->|WDA HTTP| COORD
+    PHONE -->|USB| COORD
+    COORD -->|video websocket| UI
 
-* New iOS provider command:
-  - `stf ios-provider` (`lib/cli/ios-provider/index.js`)
-  - runtime unit (`lib/units/ios-provider/index.js`)
-* `stf local` iOS flags:
-  - `--ios-enable`
-  - `--ios-provider-mode` (`disabled` or `host-bridge`)
-  - `--ios-coordinator-event-connect-sub` and `--ios-coordinator-event-topic`
-  - `--ios-storage-url`, `--ios-ios-deploy-path`, `--ios-xcode-developer-dir`, `--ios-wda-host`
-* Control-plane wiring for iOS device identity/actions (wire/websocket/API path updates).
-* iOS actions currently wired in STF:
-  - lifecycle from coordinator events (`connect/present/heartbeat/disconnect`)
-  - touch/home/type via WDA when WDA is available
-  - app install (`.ipa`), uninstall, launch-by-bundle-id
-  - screenshot capture and upload path for iOS devices
-* UI update:
-  - install pane now includes iOS launch-by-bundle-id action.
-* Storage reliability hardening:
-  - image storage plugin now preserves `Content-Type` from blob retrieval.
-  - if neither GraphicsMagick nor ImageMagick is installed, image responses degrade to source passthrough instead of broken screenshot output.
-* iOS provider-side screenshot capture path was updated in the companion iOS support repo (`stf_ios_support`) with `idevicescreenshot` and WDA fallback behavior.
-* Samsung flash workflow (MVP scaffolding and guarded execution path):
-  - new CLI command `stf flash-samsung` with actions: `worker`, `enqueue`, `list`, `get`, `cancel`.
-  - `stf local` worker flags: `--enable-flash-samsung`, `--flash-samsung-execution-mode`, `--flash-samsung-execution-backend`, and policy guardrail options.
-  - new DB-backed `flashJobs` workflow for queueing, status, logs, and cancellation.
-  - REST API surface under `/api/v1/samsung/flash-jobs` and `/api/v1/samsung/flash-service/status`.
-  - websocket actions for enqueue/status and UI integration in maintenance and the Samsung updater service view.
-  - safety defaults to non-destructive mode (`dry-run` by default), with explicit opt-in guardrails for execute mode.
+    STF --> LOGS
+    COORD --> LOGS
+    DBLOCAL --> LOGS
+    DBCONT --> LOGS
+```
 
-### What remains different from full Android parity
+Source: `doc/topology.mmd`
 
-* iOS still requires a companion macOS stack (`stf_ios_support`) for coordinator/video/WDA orchestration.
-* Full right-panel parity is not complete; Android-only controls are still unsupported for iOS.
-* iOS in this fork is still marked experimental.
-* Samsung flashing execution flow is intentionally guarded and currently centered on controlled lab workflows.
+Static fallback:
 
-Current implementation notes and rollout status are tracked in [doc/IOS_SUPPORT_PORT_PLAN.md](doc/IOS_SUPPORT_PORT_PLAN.md).
-Samsung workflow references:
-* [doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md](doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md)
-* [doc/SAMSUNG_FLASHING_TEST_PLAN.md](doc/SAMSUNG_FLASHING_TEST_PLAN.md)
+![STF Topology Diagram](doc/topo-v1.png)
+
+A practical fork of DeviceFarmer STF for local lab use.
+
+- Android flow from upstream STF.
+- Experimental iOS host-bridge flow via companion repo `stf_ios_support`.
+- Samsung flashing pipeline enabled in safe mode by default (`dry-run`).
+
+## Who This Is For
+
+DevOps engineers bringing up STF in a local/dev environment.
+
+## TODO
+- Generalize bring up process
+-  
+
+## What We Use In Development
+
+- Node.js `22.11.0` (`.nvmrc`, `.tool-versions`)
+- npm
+- Docker + Docker Compose
+- macOS iOS toolchain (for iOS path): Xcode, `ios-deploy`
+- Companion repo: `$HOME/Projects/STF iOS/stf_ios_support`
+
+## Fast Start (What We Actually Run)
+
+From repo root:
+
+```bash
+cd /Users/naokiogishi/Projects/STF/stf
+npm install
+npx gulp clean build
+./restart-all.sh
+```
+
+What this starts:
+
+- RethinkDB (local binary or Docker, auto-selected)
+- `stf local` with iOS + Samsung worker flags
+- iOS coordinator from `stf_ios_support`
+
+## Verify Startup
+
+Use the exact URLs printed by `./restart-all.sh`.
+
+Expected checks:
+
+```bash
+curl -I http://<printed-host>:7100
+curl -I http://<printed-host>:7100/auth/mock/
+```
+
+Expected behavior:
+
+- `7100` returns `302` to `/auth/mock/`
+- `/auth/mock/` returns `200`
+
+## Logs and Debug
+
+Primary logs:
+
+- `tmp/restart-all/rethinkdb.log`
+- `tmp/restart-all/stf-local.log`
+- `tmp/restart-all/ios-coordinator.log`
+
+Tail all:
+
+```bash
+tail -f tmp/restart-all/rethinkdb.log tmp/restart-all/stf-local.log tmp/restart-all/ios-coordinator.log
+```
+
+Useful iOS readiness signals:
+
+- STF log: `Introduced iOS device ...`
+- Coordinator log: `WDA Running`
+- Coordinator log: `Fetched WDA session`
+
+## iOS Device Bring-Up (Current Flow)
+
+1. Connect and unlock iPhone, trust host.
+2. Confirm host sees device:
+
+```bash
+ios-deploy -c -t 1
+```
+
+3. Start stack with `./restart-all.sh`.
+4. Open printed STF URL and verify device is online.
+5. Validate controls: tap, home, type, screenshot.
+
+## Docker-Only Path (No iOS Coordinator)
+
+For baseline STF stack only:
+
+```bash
+docker compose up -d
+docker compose ps
+docker compose logs -f stf
+```
+
+Compose defaults:
+
+- UI: `7100`
+- WebSocket: `7110`
+- Provider range: `7400-7500`
+- RethinkDB host bind: `127.0.0.1:28015`
+
+## Common Pitfalls
+
+- Wrong `public-ip` causes bad redirects/login loops.
+- iOS control depends on WDA; no WDA means screen-only behavior.
+- Do not mix hosts (`localhost` vs `127.0.0.1` vs LAN IP) in one session.
+- USB passthrough is required for real devices.
+
+## Core Commands
+
+```bash
+# local STF only
+npm run local
+
+# build assets
+npx gulp build
+
+# clean + build assets
+npx gulp clean build
+
+# full local reset/restart flow used by this fork
+./restart-all.sh
+```
+
+## Key Docs
+
+- iOS runbook: `doc/IOS_SUPPORT_PLAN.md`
+- iOS implementation notes: `doc/IOS_SUPPORT_PORT_PLAN_Mar032026.md`
+- Samsung workflow: `doc/SAMSUNG_FLASHING_WORKFLOW_PLAN.md`
+- Samsung test plan: `doc/SAMSUNG_FLASHING_TEST_PLAN.md`
+- General deployment reference: `doc/DEPLOYMENT.md`
